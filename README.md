@@ -1,14 +1,12 @@
 # AuthMatrix (Community-Maintained Version)
 
-
-
 ---
 
 ### ⚠️ **Notice: This is a Community-Maintained Fork**
 
 This is an actively maintained fork of the original **AuthMatrix** project by **SecurityInnovation** ([github.com/SecurityInnovation/AuthMatrix](https://github.com/SecurityInnovation/AuthMatrix)).
 
-The original project appears to be unmaintained (last commit in [Year of last commit, e.g., 2018]). This fork was created to continue its development, fix outstanding bugs, incorporate modern Burp Suite APIs, and add new features for the community.
+The original project appears to be unmaintained (last commit in **2018**). This fork was created to continue its development, fix outstanding bugs, incorporate modern Burp Suite APIs, and add new features for the community.
 
 All credit for the original concept and foundational code goes to SecurityInnovation.
 
@@ -24,39 +22,31 @@ This extension allows testers to define a set of users, roles, and "chains" (req
 
 This version includes all the original functionality of AuthMatrix, plus the following enhancements:
 
-* ✅ **[Your Feature 1]**: (e.g., Added support for JSON Web Tokens (JWT) in headers)
-* ✅ **[Your Feature 2]**: (e.g., Integrated with Burp's new Logger component)
-* 🐛 **[Your Bug Fix 1]**: (e.g., Fixed a critical bug where session handling would fail on new Java versions)
-* 🔧 **[Your Update 1]**: (e.g., Updated all libraries to be compatible with the latest Burp Suite Java version)
-* *...[List your other changes here]...*
+* ✅ **Added "Clear Auth & Re-import" Button**: A new UI button to easily clear all Cookie and Authorization headers from requests.
+* 🐛 **Fixed Double Request Bug**: Corrected an issue where requests were being sent twice; now only a single request is sent.
+
+### Feature Preview
+
+Here is a look at the new "Clear Auth & Re-import" button:
+
+<img width="1100" height="511" alt="Screenshot 2568-11-11 at 17 15 45" src="https://github.com/user-attachments/assets/cb55ee01-b1e1-433f-9592-0d4ef364064f" />
 
 ## Installation
 
-### 1. BApp Store (Recommended) Coming soon
+### 1. BApp Store (Coming Soon)
 
-This extension is available in the Burp Suite **BApp Store**. This is the easiest way to install and stay updated.
-
-1.  Go to the **Extender** tab in Burp Suite.
-2.  Click the **BApp Store** sub-tab.
-3.  Search for "AuthMatrix".
-4.  Click **Install**.
-
+We are working on submitting this updated version to the PortSwigger BApp Store. For now, please use the manual installation method below.
 
 ### 2. Manual Installation (Build from Source)
 
-If you prefer to build it yourself:
-
 1.  Clone this repository:
     ```bash
-    git clone [https://github.com/](https://github.com/) earth11411/AuthMatrix.git
+    git clone https://github.com/earth11411/AuthMatrix.git
     ```
-2.  Build the project using [Your build method, e.g., Gradle or Maven]:
-    ```bash
-    ./gradlew fatJar
-    ```
-3.  Go to the **Extender** tab in Burp Suite.
-4.  Click **Add** and select the "Java" extension type.
-5.  Load the generated `AuthMatrix-all.jar` file from the `/build/libs/` directory.
+2.  Go to the **Extensions** tab in Burp Suite.
+4.  Click **Add**.
+5.  Select **"Python"** as the Extension type.
+6.  Load the generated `AuthMatrix.py` file from the git directory.
 
 ## Usage
 
@@ -64,7 +54,7 @@ For detailed usage instructions, please refer to the **original project's Wiki**
 
 * **[Original Wiki Link](https://github.com/SecurityInnovation/AuthMatrix/wiki)**
 
-*(Note: The original Wiki may not reflect the new features added in this fork. We are working on updating the documentation.)*
+*(Note: The original Wiki may not reflect the new features added in this fork.)*
 
 ## Contributing
 
