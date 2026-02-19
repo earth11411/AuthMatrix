@@ -128,18 +128,18 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
         if valid:
             menuItem = JMenuItem("Send request(s) to AuthMatrix")
             def singleRequestAction(event):
-                if not self.isRequestSent:                              
-                    addRequestsToTab(event)                        
-                    self.isRequestSent = True                                          
+                if not self.isRequestSent:
+                    addRequestsToTab(event)
+                    self.isRequestSent = True
             menuItem.addActionListener(singleRequestAction)
             ret.append(menuItem)
             if len(messages) == 1:
                 for user in self._db.getUsersInOrderByRow():
                     menuItem = JMenuItem("Send cookies to AuthMatrix user: " + user._name)
                     def sendCookiesAction(event, user=user):
-                        if not self.isRequestSent:                             
+                        if not self.isRequestSent:
                             UserCookiesActionListener(user, self).actionPerformed(event)
-                            self.isRequestSent = True                    
+                            self.isRequestSent = True
                     menuItem.addActionListener(sendCookiesAction)
                     ret.append(menuItem)
         return ret
@@ -209,17 +209,17 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
             filein.close()
             if not jsonText or jsonText[0] !="{":
                 warning = """
-                CAUTION: 
-                Loading a saved configuration prior to v0.6.3 deserializes data into Jython objects. 
+                CAUTION:
+                Loading a saved configuration prior to v0.6.3 deserializes data into Jython objects.
                 This action may pose a security threat to the application.
-                Only proceed when the source and contents of this file is trusted. 
+                Only proceed when the source and contents of this file is trusted.
                 Load Selected File?
                 """
-                result = JOptionPane.showOptionDialog(self._splitpane, 
-                    warning, "Caution", 
-                    JOptionPane.YES_NO_OPTION, 
-                    JOptionPane.WARNING_MESSAGE, 
-                    None, 
+                result = JOptionPane.showOptionDialog(self._splitpane,
+                    warning, "Caution",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE,
+                    None,
                     ["OK", "Cancel"],
                     "OK")
                 if result != JOptionPane.YES_OPTION:
@@ -295,7 +295,7 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
                             contentType = header.split(":", 1)[1].strip().lower()
                             break
                     if not contentType:
-                        continue                                              
+                        continue
                     newBodyString = self.remove_body_params(bodyString, contentType, [param_to_remove])
                     if newBodyString != bodyString:
                         modified_count += 1
@@ -340,7 +340,7 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
         gbc.gridy = 2
         panel.add(thirdline, gbc)
         result = JOptionPane.showConfirmDialog(self._splitpane, panel, "Select Response Regex", JOptionPane.OK_CANCEL_OPTION)
-        value = regexComboBox.getSelectedItem() 
+        value = regexComboBox.getSelectedItem()
         if result == JOptionPane.CANCEL_OPTION or not value:
             return None, None
         return value, failureModeCheckbox.isSelected()
@@ -362,7 +362,7 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
                 checkbox.setSelected(True)
         class HttpsItemListener(ItemListener):
             def itemStateChanged(self, e):
-                if e.getStateChange() == ItemEvent.SELECTED and portField.getText() == "80":                    
+                if e.getStateChange() == ItemEvent.SELECTED and portField.getText() == "80":
                     portField.setText("443")
                 elif e.getStateChange() == ItemEvent.DESELECTED and portField.getText() == "443":
                     portField.setText("80")
@@ -424,30 +424,30 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
     def remove_body_params(self, body, content_type, params_to_remove):
         if not body or not content_type or not params_to_remove:
             return body
-        body_string_unicode = body.decode('utf-8')                                    
+        body_string_unicode = body.decode('utf-8')
         if 'application/json' in content_type:
             try:
                 data = json.loads(body_string_unicode)
                 if isinstance(data, dict):
                     for param in params_to_remove:
                         if param in data:
-                            data[param] = ""                            
-                return json.dumps(data).encode('utf-8')                             
+                            data[param] = ""
+                return json.dumps(data).encode('utf-8')
             except ValueError:
-                return body                               
+                return body
         elif 'application/x-www-form-urlencoded' in content_type:
             try:
                 import urlparse
                 params = urlparse.parse_qs(body_string_unicode, keep_blank_values=True)
                 for p_rem in params_to_remove:
                     if p_rem in params:
-                        params[p_rem] = [u'']                                                   
+                        params[p_rem] = [u'']
                 encoded_params = {}
                 for key, values in params.items():
                     encoded_key = key.encode('utf-8')
                     encoded_values = [v.encode('utf-8') for v in values]
                     encoded_params[encoded_key] = encoded_values
-                return urllib.urlencode(encoded_params, doseq=True)                                   
+                return urllib.urlencode(encoded_params, doseq=True)
             except Exception as e:
                 print "Error parsing urlencoded body in AuthMatrix: " + str(e)
                 traceback.print_exc(file=self._callbacks.getStderr())
@@ -461,7 +461,7 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
             if str(h).lower().startswith("content-type:"):
                 content_type = str(h).split(":", 1)[1].strip().lower()
                 break
-        body_string_unicode = self._helpers.bytesToString(body_bytes).decode('utf-8')                                    
+        body_string_unicode = self._helpers.bytesToString(body_bytes).decode('utf-8')
         if 'application/json' in content_type:
             try:
                 data = json.loads(body_string_unicode)
@@ -472,25 +472,25 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
                             unicode_value = data_param_values[i].decode('utf-8') if isinstance(data_param_values[i], str) else data_param_values[i]
                             if unicode_name:
                                 data[unicode_name] = unicode_value
-                return self._helpers.stringToBytes(json.dumps(data).encode('utf-8'))                                           
+                return self._helpers.stringToBytes(json.dumps(data).encode('utf-8'))
             except ValueError:
-                return body_bytes                               
+                return body_bytes
         elif 'application/x-www-form-urlencoded' in content_type:
             try:
                 import urlparse
-                parsed_params = urlparse.parse_qs(body_string_unicode, keep_blank_values=True)                      
+                parsed_params = urlparse.parse_qs(body_string_unicode, keep_blank_values=True)
                 for i, name in enumerate(data_param_names):
                     if i < len(data_param_values):
                         unicode_name = name.decode('utf-8') if isinstance(name, str) else name
                         unicode_value = data_param_values[i].decode('utf-8') if isinstance(data_param_values[i], str) else data_param_values[i]
                         if unicode_name:
-                            parsed_params[unicode_name] = [unicode_value]                                  
+                            parsed_params[unicode_name] = [unicode_value]
                 encoded_params = {}
                 for key, values in parsed_params.items():
                     encoded_key = key.encode('utf-8')
                     encoded_values = [v.encode('utf-8') for v in values]
                     encoded_params[encoded_key] = encoded_values
-                return self._helpers.stringToBytes(urllib.urlencode(encoded_params, doseq=True))                                   
+                return self._helpers.stringToBytes(urllib.urlencode(encoded_params, doseq=True))
             except Exception as e:
                 print "Error parsing urlencoded body in AuthMatrix (apply_body_params): " + str(e)
                 traceback.print_exc(file=self._callbacks.getStderr())
@@ -501,7 +501,7 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
         self._newUserButton.setEnabled(not running)
         self._newRoleButton.setEnabled(not running)
         self._newHeaderButton.setEnabled(not running)
-        self._newUserDataParamButton.setEnabled(not running)                          
+        self._newUserDataParamButton.setEnabled(not running)
         self._newChainButton.setEnabled(not running)
         self._newStaticValueButton.setEnabled(not running)
         self._saveButton.setEnabled(not running)
@@ -537,15 +537,15 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
         updatedRecursionCheckArray = recursionCheckArray[:]
         if messageIndex in updatedRecursionCheckArray:
             print "Error: Recursion detected in message chains: "+"->".join([str(i) for i in updatedRecursionCheckArray])+"->"+str(messageIndex)
-        elif (messageIndex not in updatedMessagesThatHaveRun 
-            and messageEntry.isEnabled() 
+        elif (messageIndex not in updatedMessagesThatHaveRun
+            and messageEntry.isEnabled()
             and messageIndex in self._db.getActiveMessageIndexes()):
                 updatedRecursionCheckArray.append(messageIndex)
                 for chainIndex in self._db.getActiveChainIndexes():
                     chainEntry = self._db.arrayOfChains[chainIndex]
-                    if (messageIndex in chainEntry.getToIDRange() 
-                        and chainEntry.isEnabled() 
-                        and str(chainEntry._fromID).isdigit() 
+                    if (messageIndex in chainEntry.getToIDRange()
+                        and chainEntry.isEnabled()
+                        and str(chainEntry._fromID).isdigit()
                         and int(chainEntry._fromID) >= 0):
                             updatedMessagesThatHaveRun = self.runMessageAndDependencies(int(chainEntry._fromID), updatedMessagesThatHaveRun, updatedRecursionCheckArray)
                 self.runMessage(messageIndex)
@@ -627,12 +627,12 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
                     finalBody = self._helpers.stringToBytes(modified_body_string)
                 finalBody = self.apply_body_params(finalBody, newHeaders, self._db.arrayOfDataParamNames, userEntry._dataParams)
                 message = self._helpers.buildHttpMessage(newHeaders, finalBody)
-                tempRequestResponse.append(None)         
+                tempRequestResponse.append(None)
                 t = Thread(target=loadRequestResponse, args = [index,messageInfo.getHttpService(),message])
                 t.start()
                 t.join(self._db.LOAD_TIMEOUT)
-                requestResponse = RequestResponseStored(self, 
-                    request=message, 
+                requestResponse = RequestResponseStored(self,
+                    request=message,
                     httpService=messageInfo.getHttpService())
                 if t.isAlive():
                     print "ERROR: Request Timeout for Request #"+str(messageIndex)+" and User #"+str(userIndex)
@@ -648,7 +648,7 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
                         if str(chain._fromID) == str(messageIndex) and chain.isEnabled():
                             replace = True
                             affectedUsers = [userEntry]
-                            if str(chain._sourceUser).isdigit() and chain._sourceUser >= 0:                                                            
+                            if str(chain._sourceUser).isdigit() and chain._sourceUser >= 0:
                                 if str(chain._sourceUser) == str(userIndex):
                                     affectedUsers = self._db.getUsersInOrderByRow()
                                 else:
@@ -690,7 +690,7 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
                             ignoreUser = True
             if not ignoreUser:
                 if not userEntry._index in messageEntry._userRuns:
-                    print ("Unexpected Error: Results not found for Request #" 
+                    print ("Unexpected Error: Results not found for Request #"
                         + str(messageEntry._index) + " and User #" + str(userEntry._index))
                     return False
                 requestResponse = messageEntry._userRuns[userEntry._index]
@@ -700,7 +700,7 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
                 resp = StringUtil.fromBytes(response)
                 found = re.search(messageEntry._regex, resp, re.DOTALL)
                 roleChecked = roleIndex in activeCheckBoxedRoles
-                shouldSucceed = not roleChecked if messageEntry.isFailureRegex() else roleChecked 
+                shouldSucceed = not roleChecked if messageEntry.isFailureRegex() else roleChecked
                 succeeds = found if shouldSucceed else not found
                 if not succeeds:
                     return False
@@ -710,7 +710,7 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
         self._helpers = callbacks.getHelpers()
         callbacks.setExtensionName("AuthMatrix - v."+AUTHMATRIX_VERSION)
         self._db = MatrixDB()
-        self._fc = JFileChooser()        
+        self._fc = JFileChooser()
         selfExtender = self
         self._selectedColumn = -1
         self._selectedRow = -1
@@ -725,10 +725,10 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
         self._messageTable.redrawTable()
         self._messageTable.setDragEnabled(True)
         self._messageTable.setDropMode(DropMode.INSERT_ROWS)
-        self._messageTable.setTransferHandler(RowTransferHandler(self._messageTable))                
+        self._messageTable.setTransferHandler(RowTransferHandler(self._messageTable))
         self._userTable.setDragEnabled(True)
         self._userTable.setDropMode(DropMode.INSERT_ROWS)
-        self._userTable.setTransferHandler(RowTransferHandler(self._userTable))                
+        self._userTable.setTransferHandler(RowTransferHandler(self._userTable))
         def addPopup(component, popup):
             class genericMouseListener(MouseAdapter):
                 def mousePressed(self, e):
@@ -743,9 +743,9 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
                     if type(component) is JTableHeader:
                         table = component.getTable()
                         column = component.columnAtPoint(e.getPoint())
-                        if (type(table) is MessageTable 
-                            and column >= selfExtender._db.STATIC_MESSAGE_TABLE_COLUMN_COUNT 
-                            or type(table) is UserTable 
+                        if (type(table) is MessageTable
+                            and column >= selfExtender._db.STATIC_MESSAGE_TABLE_COLUMN_COUNT
+                            or type(table) is UserTable
                             and column >= selfExtender._db.STATIC_USER_TABLE_COLUMN_COUNT):
                                 selfExtender._selectedColumn = column
                         else:
@@ -883,7 +883,7 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
         class actionChangeDomain(ActionListener):
             def replaceDomain(self, requestResponse, newDomain):
                 requestInfo = selfExtender._helpers.analyzeRequest(requestResponse)
-                reqBody = requestResponse.getRequest()[requestInfo.getBodyOffset():]            
+                reqBody = requestResponse.getRequest()[requestInfo.getBodyOffset():]
                 newHeaders = ModifyMessage.getNewHeaders(requestInfo, None, ["Host: "+newDomain])
                 newreq = selfExtender._helpers.buildHttpMessage(newHeaders, reqBody)
                 return newreq
@@ -1041,7 +1041,7 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
         self._userTable.setDefaultRenderer(str, UserEnabledRenderer(self._userTable.getDefaultRenderer(str), self._db))
         self._userTable.setDefaultRenderer(Boolean, UserEnabledRenderer(self._userTable.getDefaultRenderer(Boolean), self._db))
         self._chainTable.setDefaultRenderer(str, ChainEnabledRenderer(self._chainTable.getDefaultRenderer(str), self._db))
-        callbacks.addSuiteTab(self)        
+        callbacks.addSuiteTab(self)
         callbacks.registerContextMenuFactory(self)
         return
 class ModifyMessage():
@@ -1137,8 +1137,8 @@ class MatrixDB():
         self.deletedChainCount = 0
         self.arrayOfSVs = ArrayList()
         self.headerCount = 0
-        self.arrayOfDataParamNames = ArrayList()                                 
-        self.dataParamCount = 0                                      
+        self.arrayOfDataParamNames = ArrayList()
+        self.dataParamCount = 0
         self.arrayOfRegexes = []
     def getOrCreateUser(self, name):
         self.lock.acquire()
@@ -1152,7 +1152,7 @@ class MatrixDB():
                 userIndex - self.deletedUserCount,
                 name,
                 headers=[""]*self.headerCount,
-                data_params=[""]*self.dataParamCount))                                      
+                data_params=[""]*self.dataParamCount))
             self.lock.release()
             singleRoleIndex = self.getOrCreateRole(name, True)
             self.lock.acquire()
@@ -1185,13 +1185,13 @@ class MatrixDB():
                     assert(curColumn >= newColumn)
                     self.arrayOfRoles[i].setColumn(curColumn+1)
             self.arrayOfRoles.add(RoleEntry(roleIndex,
-                newColumn, 
+                newColumn,
                 name,
                 singleUser=singleUser))
             for userIndex in self.getActiveUserIndexes():
                 prechecked = False
                 if singleUser and self.arrayOfUsers[userIndex]._name == name[:-len(suffix)]:
-                    prechecked=True                
+                    prechecked=True
                 self.arrayOfUsers[userIndex].addRoleByIndex(roleIndex, prechecked)
             for messageIndex in self.getActiveMessageIndexes():
                 self.arrayOfMessages[messageIndex].addRoleByIndex(roleIndex)
@@ -1256,9 +1256,9 @@ class MatrixDB():
         self.deletedUserCount = db.deletedUserCount
         self.deletedRoleCount = db.deletedRoleCount
         self.deletedMessageCount = db.deletedMessageCount
-        self.deletedChainCount = 0                                                   
+        self.deletedChainCount = 0
         self.arrayOfSVs = ArrayList()
-        self.headerCount = 1                                    
+        self.headerCount = 1
         self.arrayOfRegexes = []
         for message in db.arrayOfMessages:
             if message._successRegex.startswith(FAILURE_REGEX_SERIALIZE_CODE):
@@ -1276,7 +1276,7 @@ class MatrixDB():
         for role in db.arrayOfRoles:
             self.arrayOfRoles.add(RoleEntry(
                 role._index,
-                role._mTableColumn-3,                                                                     
+                role._mTableColumn-3,
                 role._name,
                 role._deleted))
         for user in db.arrayOfUsers:
@@ -1308,7 +1308,7 @@ class MatrixDB():
                     user._deleted,
                     sourceUser
                     ))
-            else: 
+            else:
                 token = [""] if not user._token else user._token.split(AUTHMATRIX_SERIALIZE_CODE)
                 cookies = token[0]
                 header = "" if len(token)==1 else token[1]
@@ -1350,13 +1350,13 @@ class MatrixDB():
                         roleEntry["column"],
                         roleEntry["name"],
                         deleted = deleted,
-                        singleUser = False if version < "0.7" or "singleUser" not in roleEntry else roleEntry["singleUser"] 
+                        singleUser = False if version < "0.7" or "singleUser" not in roleEntry else roleEntry["singleUser"]
                         ))
             if "arrayOfUsers" in stateDict:
                 self.arrayOfUsers = ArrayList()
                 self.deletedUserCount = 0
                 self.headerCount = 0
-                self.dataParamCount = 0                                        
+                self.dataParamCount = 0
                 self.arrayOfSVs = ArrayList()
                 for userEntry in stateDict["arrayOfUsers"]:
                     deleted = False if "deleted" not in userEntry else userEntry["deleted"]
@@ -1370,7 +1370,7 @@ class MatrixDB():
                     elif "headerBase64" in userEntry:
                         self.headerCount = 1
                         headers = [base64.b64decode(userEntry["headerBase64"])]
-                    else:     
+                    else:
                         headers = [""]*self.headerCount
                     data_params = []
                     if "dataParamsBase64" in userEntry:
@@ -1378,22 +1378,22 @@ class MatrixDB():
                         if self.dataParamCount == 0:
                             self.dataParamCount = len(data_params)
                     else:
-                        data_params = [""] * self.dataParamCount                                             
+                        data_params = [""] * self.dataParamCount
                     self.arrayOfUsers.add(UserEntry(
                         userEntry["index"],
                         userEntry["tableRow"],
                         userEntry["name"],
-                        {int(x): userEntry["roles"][x] for x in userEntry["roles"].keys()},                       
+                        {int(x): userEntry["roles"][x] for x in userEntry["roles"].keys()},
                         deleted = deleted,
                         cookies = "" if "cookiesBase64" not in userEntry else base64.b64decode(userEntry["cookiesBase64"]),
                         headers = headers,
-                        data_params = data_params,                                
+                        data_params = data_params,
                         enabled = True if "enabled" not in userEntry else userEntry["enabled"]
                         ))
                 if "arrayOfDataParamNames" in stateDict:
                     self.arrayOfDataParamNames = ArrayList([base64.b64decode(x) for x in stateDict["arrayOfDataParamNames"]])
                     self.dataParamCount = len(self.arrayOfDataParamNames)
-                elif self.dataParamCount > 0:                                                                                       
+                elif self.dataParamCount > 0:
                     for i in range(self.dataParamCount):
                         self.arrayOfDataParamNames.add("DataParam"+str(i+1))
                 keyword = "arrayOfChainSources" if version >= "0.8" else "arrayOfSVs"
@@ -1401,7 +1401,7 @@ class MatrixDB():
                     for svEntry in stateDict[keyword]:
                         self.arrayOfSVs.add(SVEntry(
                             svEntry["name"],
-                            {int(x): svEntry["userValues"][x] for x in svEntry["userValues"].keys() if int(x) in self.getActiveUserIndexes()},                       
+                            {int(x): svEntry["userValues"][x] for x in svEntry["userValues"].keys() if int(x) in self.getActiveUserIndexes()},
                             ))
             if "arrayOfMessages" in stateDict:
                 self.arrayOfMessages = ArrayList()
@@ -1424,10 +1424,10 @@ class MatrixDB():
                         messageEntry["index"],
                         messageEntry["tableRow"],
                         requestResponse,
-                        messageEntry["name"], 
-                        {int(x): messageEntry["roles"][x] for x in messageEntry["roles"].keys()},                       
-                        regex = regex, 
-                        deleted = deleted, 
+                        messageEntry["name"],
+                        {int(x): messageEntry["roles"][x] for x in messageEntry["roles"].keys()},
+                        regex = regex,
+                        deleted = deleted,
                         failureRegexMode = False if "failureRegexMode" not in messageEntry else messageEntry["failureRegexMode"],
                         enabled = True if "enabled" not in messageEntry else messageEntry["enabled"]
                         ))
@@ -1464,11 +1464,11 @@ class MatrixDB():
             self.loadJson(backupState,extender)
     def sanityCheck(self, extender):
         try:
-            userIndexes = self.getActiveUserIndexes() 
+            userIndexes = self.getActiveUserIndexes()
             roleIndexes = self.getActiveRoleIndexes()
             messageIndexes = self.getActiveMessageIndexes()
             chainIndexes = self.getActiveChainIndexes()
-            for indexes, currentArray, deletedCount in [ 
+            for indexes, currentArray, deletedCount in [
                 (userIndexes, self.arrayOfUsers, self.deletedUserCount),
                 (roleIndexes, self.arrayOfRoles, self.deletedRoleCount),
                 (messageIndexes, self.arrayOfMessages, self.deletedMessageCount),
@@ -1484,7 +1484,7 @@ class MatrixDB():
                             return "Index Higher than Total Active + Deleted."
                         if currentIndex != currentArray[currentIndex]._index:
                             return "Entries in the State File Arrays must be in order by index"
-            for indexes, currentArray in [             
+            for indexes, currentArray in [
                 (userIndexes, self.arrayOfUsers),
                 (messageIndexes, self.arrayOfMessages),
                 (chainIndexes, self.arrayOfChains)]:
@@ -1503,7 +1503,7 @@ class MatrixDB():
             for userIndex in userIndexes:
                 if len(self.arrayOfUsers[userIndex]._headers) != self.headerCount:
                     return "Incorrect Number of Headers for a User.  Must be "+str(self.headerCount)
-            for indexes, currentArray in [             
+            for indexes, currentArray in [
                 (userIndexes, self.arrayOfUsers),
                 (messageIndexes, self.arrayOfMessages)]:
                     for index in indexes:
@@ -1550,15 +1550,15 @@ class MatrixDB():
         for messageEntry in self.arrayOfMessages:
             deleted = messageEntry._deleted
             stateDict["arrayOfMessages"].append({
-                    "index":messageEntry._index, 
+                    "index":messageEntry._index,
                     "tableRow":messageEntry._tableRow if not deleted else None,
                     "requestBase64":base64.b64encode(StringUtil.fromBytes(messageEntry._requestResponse.getRequest()).encode("utf-8")) if not deleted else None,
                     "host":messageEntry._requestResponse.getHttpService().getHost() if not deleted else None,
                     "port":messageEntry._requestResponse.getHttpService().getPort() if not deleted else None,
                     "protocol":messageEntry._requestResponse.getHttpService().getProtocol() if not deleted else None,
-                    "name":messageEntry._name if not deleted else None, 
+                    "name":messageEntry._name if not deleted else None,
                     "roles":messageEntry._roles if not deleted else {},
-                    "regexBase64":base64.b64encode(messageEntry._regex.encode("utf-8")) if messageEntry._regex and not deleted else "", 
+                    "regexBase64":base64.b64encode(messageEntry._regex.encode("utf-8")) if messageEntry._regex and not deleted else "",
                     "deleted":deleted,
                     "enabled":messageEntry._enabled,
                     "failureRegexMode":messageEntry._failureRegexMode if not deleted else None,
@@ -1604,7 +1604,7 @@ class MatrixDB():
     def getActiveMessageIndexes(self):
         return [x._index for x in self.arrayOfMessages if not x.isDeleted()]
     def getActiveChainIndexes(self):
-        return [x._index for x in self.arrayOfChains if not x.isDeleted()]        
+        return [x._index for x in self.arrayOfChains if not x.isDeleted()]
     def getActiveUserCount(self):
         ret = self.arrayOfUsers.size()-self.deletedUserCount
         assert(ret == len(self.getActiveUserIndexes()))
@@ -1620,11 +1620,15 @@ class MatrixDB():
     def getActiveSingleUserRoleCount(self):
         return len(self.getActiveSingleUserRoleIndexes())
     def getActiveChainCount(self):
-        return self.arrayOfChains.size()-self.deletedChainCount    
+        return self.arrayOfChains.size()-self.deletedChainCount
     def getMessageByRow(self, row):
         for messageEntry in [self.arrayOfMessages[i] for i in self.getActiveMessageIndexes()]:
             if messageEntry.getTableRow() == row:
                 return messageEntry
+    def getActiveMessageByMessageIndex(self, index):
+        if index in self.getActiveMessageIndexes():
+            return self.arrayOfMessages[index]
+        return None
     def getUserByRow(self, row):
         for userEntry in [self.arrayOfUsers[i] for i in self.getActiveUserIndexes()]:
             if userEntry.getTableRow() == row:
@@ -1686,7 +1690,7 @@ class MatrixDB():
             for chain in [self.arrayOfChains[i] for i in self.getActiveChainIndexes()]:
                 if chain.getTableRow()>previousRow:
                     chain.setTableRow(chain.getTableRow()-1)
-        self.lock.release()            
+        self.lock.release()
     def getMessagesInOrderByRow(self):
         messages = []
         for i in range(self.getActiveMessageCount()):
@@ -1793,21 +1797,21 @@ class UserTableModel(AbstractTableModel):
     def getColumnCount(self):
         return (self._db.STATIC_USER_TABLE_COLUMN_COUNT
             +self._db.headerCount
-            +self._db.dataParamCount                          
+            +self._db.dataParamCount
             +self._db.arrayOfSVs.size()
             +self._db.getActiveRoleCount()
             -self._db.getActiveSingleUserRoleCount())
     def getColumnName(self, columnIndex):
         headerIndex = columnIndex-self._db.STATIC_USER_TABLE_COLUMN_COUNT
-        dataParamIndex = headerIndex - self._db.headerCount                           
-        svIndex = dataParamIndex - self._db.dataParamCount                                            
+        dataParamIndex = headerIndex - self._db.headerCount
+        svIndex = dataParamIndex - self._db.dataParamCount
         if columnIndex == 0:
             return "User Name"
         elif columnIndex == 1:
             return "Cookies"
         elif headerIndex >=0 and headerIndex<self._db.headerCount:
             return "HTTP Header"
-        elif dataParamIndex >=0 and dataParamIndex < self._db.dataParamCount:                          
+        elif dataParamIndex >=0 and dataParamIndex < self._db.dataParamCount:
             return self._db.arrayOfDataParamNames[dataParamIndex]
         elif svIndex >= 0 and svIndex < self._db.arrayOfSVs.size():
             return self._db.arrayOfSVs[svIndex]._name
@@ -2013,10 +2017,10 @@ class MessageTable(JTable):
         for messageIndex in self._viewerMap:
             requestViewer = self._viewerMap[messageIndex]
             if requestViewer and requestViewer.isMessageModified():
-                messageEntry = self.getModel()._db.getMessageByRow(messageIndex)
+                messageEntry = self.getModel()._db.getActiveMessageByMessageIndex(messageIndex)
                 newMessage = requestViewer.getMessage()
-                messageEntry._requestResponse = RequestResponseStored(self._extender, 
-                    request=newMessage, 
+                messageEntry._requestResponse = RequestResponseStored(self._extender,
+                    request=newMessage,
                     httpService=messageEntry._requestResponse.getHttpService())
         self._viewerMap = {}
 class ChainTableModel(AbstractTableModel):
@@ -2163,7 +2167,7 @@ class ChainTable(JTable):
                 self.button = JButton()
                 self.oldVal = ""
                 def actionPerformed(self,e):
-                    JOptionPane.showMessageDialog(self.button,self.scrollablePane,"Select All Request IDs",JOptionPane.PLAIN_MESSAGE)                    
+                    JOptionPane.showMessageDialog(self.button,self.scrollablePane,"Select All Request IDs",JOptionPane.PLAIN_MESSAGE)
                     self.fireEditingStopped()
                 def getTableCellEditorComponent(self,table,value,isSelected,rowIndex,vColIndex):
                     self.oldVal = value if destPrefix not in value else value[len(destPrefix):]
@@ -2195,13 +2199,13 @@ class ChainTable(JTable):
             self.getColumnModel().getColumn(0).setMinWidth(180);
             self.getColumnModel().getColumn(0).setMaxWidth(300);
             self.getColumnModel().getColumn(1).setMinWidth(115);
-            self.getColumnModel().getColumn(1).setMaxWidth(175);        
+            self.getColumnModel().getColumn(1).setMaxWidth(175);
             self.getColumnModel().getColumn(2).setMinWidth(180);
             self.getColumnModel().getColumn(3).setMinWidth(160);
-            self.getColumnModel().getColumn(3).setMaxWidth(320);        
+            self.getColumnModel().getColumn(3).setMaxWidth(320);
             self.getColumnModel().getColumn(4).setMinWidth(180);
             self.getColumnModel().getColumn(5).setMinWidth(150);
-            self.getColumnModel().getColumn(5).setMaxWidth(270); 
+            self.getColumnModel().getColumn(5).setMaxWidth(270);
             self.getColumnModel().getColumn(6).setMinWidth(100);
 class SuccessBooleanRenderer(JCheckBox, TableCellRenderer):
     def __init__(self, defaultCellRender, db):
@@ -2441,7 +2445,7 @@ class ChainEntry:
     def setDeleted(self):
         self._deleted = True
     def isDeleted(self):
-        return self._deleted    
+        return self._deleted
     def setTableRow(self, row):
         self._tableRow = row
     def getTableRow(self):
@@ -2612,7 +2616,7 @@ class MessageEntryData:
         self._host = host
         self._port = port
         self._protocol = protocol
-        self._url = ""                                                  
+        self._url = ""
         self._name = name
         self._roles = roles
         self._successRegex = successRegex
