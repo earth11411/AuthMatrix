@@ -1625,6 +1625,10 @@ class MatrixDB():
         for messageEntry in [self.arrayOfMessages[i] for i in self.getActiveMessageIndexes()]:
             if messageEntry.getTableRow() == row:
                 return messageEntry
+    def getActiveMessageByMessageIndex(self, index):
+        if index in self.getActiveMessageIndexes():
+            return self.arrayOfMessages[index]
+        return None
     def getUserByRow(self, row):
         for userEntry in [self.arrayOfUsers[i] for i in self.getActiveUserIndexes()]:
             if userEntry.getTableRow() == row:
@@ -2013,7 +2017,7 @@ class MessageTable(JTable):
         for messageIndex in self._viewerMap:
             requestViewer = self._viewerMap[messageIndex]
             if requestViewer and requestViewer.isMessageModified():
-                messageEntry = self.getModel()._db.getMessageByRow(messageIndex)
+                messageEntry = self.getModel()._db.getActiveMessageByMessageIndex(messageIndex)
                 newMessage = requestViewer.getMessage()
                 messageEntry._requestResponse = RequestResponseStored(self._extender,
                     request=newMessage,
