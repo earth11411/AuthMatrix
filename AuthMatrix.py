@@ -2512,6 +2512,19 @@ class ChainEntry:
             traceback.print_exc(file=callbacks.getStderr())
             return value
         return ret
+    def getToIDRange(self):
+        result = []
+        for part in self._toID.split(','):
+            if '-' in part:
+                a,b = part.split('-')
+                if a.isdigit() and b.isdigit():
+                    a,b = int(a),int(b)
+                    result.extend(range(a,b+1))
+            else:
+                if part.isdigit():
+                    a = int(part)
+                    result.append(a)
+        return result
 class SVEntry:
     def __init__(self, name, userValues = {}):
         self._name=name
