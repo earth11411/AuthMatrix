@@ -25,30 +25,25 @@ Here is a look at the new buttons:
 
 This version includes all the original functionality of AuthMatrix, plus the following enhancements:
 
-**1. ✅ Bug Fix: Single Request Logic:**
 
-**Original Issue:** Sending a request to AuthMatrix often triggered two redundant requests.
-
-**Fix:** Corrected the logic to ensure only a single request is sent, reducing noise and preventing potential side effects on the target server.
-
-**2. ✅ GUI Performance & Stability Fixes (Special Thanks to @Abyssraven0x13):**
+**1. ✅ GUI Performance & Stability Fixes (Special Thanks to @Abyssraven0x13):**
 
 **Fixed GUI Freeze & NullPointerException:** Corrected the getTableCellRendererComponent logic to verify the existence of the setSelected method before execution, preventing crashes in certain Burp Suite environments.
 
 **Fixed Typos & Logic Errors:** Resolved a naming error where selfelfExtender was used instead of selfExtender, ensuring proper row selection and menu functionality.
 
 
-**3. 🧹 Clear Auth & Re-import**: 
+**2. 🧹 Clear Auth & Re-import**: 
 Easily clear all Cookie and Authorization headers from your requests with a single click.
 
 **How to use:** Click the "Clear Auth & Re-import" button to reset session tokens before starting a new test matrix.
 
-**4. ✂️ Remove Body Parameters**
+**3. ✂️ Remove Body Parameters**
 Designed for cases where sensitive tokens or parameters are passed in the HTTP Body (supports x-www-form-urlencoded and JSON).
 
 **How to use:** 1. Click "Remove Body Param". 2. Enter the name of the parameter you want to clear. 3. The extension will automatically set that parameter's value to empty for all requests.
 
-**4. 🔄 Dynamic New Data (Body Injection)**
+**5. 🔄 Dynamic New Data (Body Injection)**
 Perfect for testing Broken Access Control when servers require specific user tokens or IDs within the HTTP Body.
 
 **How to use:**
