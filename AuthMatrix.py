@@ -1047,8 +1047,8 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
 class ModifyMessage():
     @staticmethod
     def cookieReplace(oldCookieStr, newCookieStr):
-        previousCookies = oldCookieStr.replace(" ","").split(";")
-        newCookies = newCookieStr.replace(" ","").split(";")
+        previousCookies = [x.strip() for x in oldCookieStr.split(";") if x.strip()]
+        newCookies = [x.strip() for x in newCookieStr.split(";") if x.strip()]
         newCookieVariableNames = []
         for newCookie in newCookies:
             equalsToken = newCookie.find("=")
@@ -1067,14 +1067,13 @@ class ModifyMessage():
         headers = requestInfo.getHeaders()
         if newCookieStr:
             replaceIndex = -1
-            cookieHeader = "Cookie:"
             oldCookieStr = ""
             for i in range(headers.size()):
                 header = headers[i]
-                if str(header).startswith(cookieHeader):
+                if str(header).lower().startswith("cookie:"):
                     replaceIndex = i
-                    oldCookieStr = str(header)[len(cookieHeader):]
-            newCookiesHeader = cookieHeader+" "+ModifyMessage.cookieReplace(oldCookieStr,newCookieStr)
+                    oldCookieStr = str(header)[7:].strip()
+            newCookiesHeader = "Cookie: "+ModifyMessage.cookieReplace(oldCookieStr,newCookieStr)
             if replaceIndex >= 0:
                 ret.set(replaceIndex, newCookiesHeader)
             else:
@@ -1083,9 +1082,10 @@ class ModifyMessage():
             replaceIndex = -1
             colon = newHeader.find(":")
             if colon >= 0:
+                headerPrefix = newHeader[0:colon+1].lower()
                 for i in range(headers.size()):
                     header = headers[i]
-                    if str(header).startswith(newHeader[0:colon+1]):
+                    if str(header).lower().startswith(headerPrefix):
                         replaceIndex = i
             if replaceIndex >= 0:
                 ret.set(replaceIndex, newHeader)
@@ -2512,6 +2512,19 @@ class ChainEntry:
             traceback.print_exc(file=callbacks.getStderr())
             return value
         return ret
+    def getToIDRange(self):
+        result = []
+        for part in self._toID.split(','):
+            if '-' in part:
+                a,b = part.split('-')
+                if a.isdigit() and b.isdigit():
+                    a,b = int(a),int(b)
+                    result.extend(range(a,b+1))
+            else:
+                if part.isdigit():
+                    a = int(part)
+                    result.append(a)
+        return result
 class SVEntry:
     def __init__(self, name, userValues = {}):
         self._name=name
