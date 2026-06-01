@@ -82,17 +82,18 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
     def createMenuItems(self, invocation):
         def addRequestsToTab(e):
             if messages:
-                messageInfo = messages[0]
-                requestInfo = self._helpers.analyzeRequest(messageInfo)
-                name = str(requestInfo.getMethod()).ljust(8) + requestInfo.getUrl().getPath()
-                regex = "^HTTP/1\.1 200 OK"
-                response = messageInfo.getResponse()
-                if response:
-                    responseInfo=self._helpers.analyzeResponse(response)
-                    if len(responseInfo.getHeaders()):
-                        responseCodeHeader = responseInfo.getHeaders()[0]
-                        regex = "^"+re.escape(responseCodeHeader)
-                messageIndex = self._db.createNewMessage(RequestResponseStored(self,requestResponse=messageInfo), name, regex)
+                for messageInfo in messages:
+                    messageInfo = messages[0]
+                    requestInfo = self._helpers.analyzeRequest(messageInfo)
+                    name = str(requestInfo.getMethod()).ljust(8) + requestInfo.getUrl().getPath()
+                    regex = "^HTTP/1\.1 200 OK"
+                    response = messageInfo.getResponse()
+                    if response:
+                        responseInfo=self._helpers.analyzeResponse(response)
+                        if len(responseInfo.getHeaders()):
+                            responseCodeHeader = responseInfo.getHeaders()[0]
+                            regex = "^"+re.escape(responseCodeHeader)
+                    messageIndex = self._db.createNewMessage(RequestResponseStored(self,requestResponse=messageInfo), name, regex)
             self._messageTable.redrawTable()
             self._chainTable.redrawTable()
             self.highlightTab()
