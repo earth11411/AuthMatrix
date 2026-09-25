@@ -43,7 +43,7 @@ Designed for cases where sensitive tokens or parameters are passed in the HTTP B
 
 **How to use:** 1. Click "Remove Body Param". 2. Enter the name of the parameter you want to clear. 3. The extension will automatically set that parameter's value to empty for all requests.
 
-**5. 🔄 Dynamic New Data (Body Injection)**
+**4. 🔄 Dynamic New Data (Body Injection)**
 Perfect for testing Broken Access Control when servers require specific user tokens or IDs within the HTTP Body.
 
 **How to use:**
@@ -51,6 +51,25 @@ Perfect for testing Broken Access Control when servers require specific user tok
 2. A dialog will appear for each user; enter the specific value intended for that user.
 3. During the scan, each user will send the request with their uniquely assigned parameter value in the body.
 
+**5. 🐛 Data Param Column-Mapping Fixes (Latest Update)**
+Fixed a set of bugs where the "New Data" (Data Param) feature could crash the extension or corrupt column mapping in the User table. Details below.
+
+---
+
+## 🩹 Bug Fixes (Latest Update)
+
+The following issues were identified and fixed in this release:
+
+| # | Issue | Fix |
+|---|-------|-----|
+| 1 | `UserTable.redrawTable()` threw `AttributeError` and crashed the UI whenever a Data Param existed, because it referenced `self._db` instead of the model's `_db`. | Changed to `self.getModel()._db` so the User table renders correctly with Data Param columns present. |
+| 2 | `getRoleByColumn()` did not account for `dataParamCount` when computing the starting column offset for the User table, causing role checkboxes/columns to map to the wrong column once a Data Param was added. | Added `dataParamCount` to the offset calculation so Role columns line up correctly. |
+| 3 | The header right-click menu's "Remove" action (`actionRemoveColumn`) for the User table did not account for Data Param columns, so removing a Header, SV, or Role column could delete the wrong column — and there was no way to remove a Data Param column at all. | Rewrote the column-range logic (Header → Data Param → SV → Role) and wired up the existing `deleteDataParam()` method so Data Param columns can now be removed from the UI. |
+| 4 | `runMessage()`'s inner `loadRequestResponse()` referenced an undefined `callbacks` variable in its exception handler, raising a `NameError` on top of the original error and obscuring real request failures. | Changed to `self._callbacks.getStderr()`. |
+| 5 | `MatrixDB.clear()` had a typo (`self.arrayOfDataParams` instead of `self.arrayOfDataParamNames`) and never reset `dataParamCount`, leaving Data Param state inconsistent after clearing the config. | Fixed the typo and added `self.dataParamCount = 0` to the reset. |
+| 6 | `remove_body_params()` could raise `UnicodeDecodeError` when passed a body that was already decoded (unicode) text, since it unconditionally called `.decode('utf-8')` again. | Added a check to only decode if the input isn't already `unicode`. |
+
+---
 
 ## Installation
 
