@@ -424,7 +424,7 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
     def remove_body_params(self, body, content_type, params_to_remove):
         if not body or not content_type or not params_to_remove:
             return body
-        body_string_unicode = body.decode('utf-8')
+        body_string_unicode = body if isinstance(body, unicode) else body.decode('utf-8')
         if 'application/json' in content_type:
             try:
                 data = json.loads(body_string_unicode)
@@ -561,7 +561,7 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
                 print "Runtime Exception"
                 return
             except:
-                traceback.print_exc(file=callbacks.getStderr())
+                traceback.print_exc(file=self._callbacks.getStderr())
         messageEntry = self._db.arrayOfMessages[messageIndex]
         messageEntry.clearResults()
         messageInfo = messageEntry._requestResponse
@@ -838,13 +838,20 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
             def actionPerformed(self,e):
                 if selfExtender._selectedColumn >= 0:
                     if self._table == "u":
-                        if selfExtender._selectedColumn >= selfExtender._db.STATIC_USER_TABLE_COLUMN_COUNT + selfExtender._db.headerCount + selfExtender._db.arrayOfSVs.size():
+                        db = selfExtender._db
+                        headerStart = db.STATIC_USER_TABLE_COLUMN_COUNT
+                        dataParamStart = headerStart + db.headerCount
+                        svStart = dataParamStart + db.dataParamCount
+                        roleStart = svStart + db.arrayOfSVs.size()
+                        if selfExtender._selectedColumn >= roleStart:
                             selfExtender._db.deleteRole(selfExtender._db.getRoleByColumn(
                                 selfExtender._selectedColumn, self._table)._index)
-                        elif selfExtender._selectedColumn >= selfExtender._db.STATIC_USER_TABLE_COLUMN_COUNT + selfExtender._db.headerCount:
-                            selfExtender._db.deleteSV(selfExtender._selectedColumn-(selfExtender._db.STATIC_USER_TABLE_COLUMN_COUNT+selfExtender._db.headerCount))
-                        elif selfExtender._selectedColumn >= selfExtender._db.STATIC_USER_TABLE_COLUMN_COUNT:
-                            selfExtender._db.deleteHeader(selfExtender._selectedColumn-selfExtender._db.STATIC_USER_TABLE_COLUMN_COUNT)
+                        elif selfExtender._selectedColumn >= svStart:
+                            selfExtender._db.deleteSV(selfExtender._selectedColumn - svStart)
+                        elif selfExtender._selectedColumn >= dataParamStart:
+                            selfExtender._db.deleteDataParam(selfExtender._selectedColumn - dataParamStart)
+                        elif selfExtender._selectedColumn >= headerStart:
+                            selfExtender._db.deleteHeader(selfExtender._selectedColumn - headerStart)
                     elif self._table == "m":
                         selfExtender._db.deleteRole(selfExtender._db.getRoleByColumn(
                                 selfExtender._selectedColumn, self._table)._index)
@@ -1235,7 +1242,8 @@ class MatrixDB():
         self.deletedChainCount = 0
         self.arrayOfSVs = ArrayList()
         self.headerCount = 0
-        self.arrayOfDataParams = ArrayList()
+        self.arrayOfDataParamNames = ArrayList()
+        self.dataParamCount = 0
         self.arrayOfRegexes = []
         self.lock.release()
     def loadLegacy(self, fileName, extender):
@@ -1634,7 +1642,13 @@ class MatrixDB():
             if userEntry.getTableRow() == row:
                 return userEntry
     def getRoleByColumn(self,column, table):
-        startingIndex = self.STATIC_MESSAGE_TABLE_COLUMN_COUNT if table == "m" else self.STATIC_USER_TABLE_COLUMN_COUNT+self.headerCount+self.arrayOfSVs.size()
+        if table == "m":
+            startingIndex = self.STATIC_MESSAGE_TABLE_COLUMN_COUNT
+        else:
+            startingIndex = (self.STATIC_USER_TABLE_COLUMN_COUNT
+                + self.headerCount
+                + self.dataParamCount
+                + self.arrayOfSVs.size())
         for roleEntry in [self.arrayOfRoles[i] for i in self.getActiveRoleIndexes()]:
             if roleEntry.getColumn()+startingIndex == column:
                 return roleEntry
@@ -1891,7 +1905,7 @@ class UserTable(JTable):
         self.getColumnModel().getColumn(1).setMinWidth(150);
         self.getColumnModel().getColumn(1).setMaxWidth(1500);
         for i in range(self.getModel()._db.dataParamCount):
-            col_index = self._db.STATIC_USER_TABLE_COLUMN_COUNT + self._db.headerCount + i
+            col_index = self.getModel()._db.STATIC_USER_TABLE_COLUMN_COUNT + self.getModel()._db.headerCount + i
             self.getColumnModel().getColumn(col_index).setMinWidth(150)
             self.getColumnModel().getColumn(col_index).setMaxWidth(1500)
         self.getTableHeader().getDefaultRenderer().setHorizontalAlignment(JLabel.CENTER)
