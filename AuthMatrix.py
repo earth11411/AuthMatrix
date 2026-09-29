@@ -58,6 +58,7 @@ import json
 import base64
 import random
 import string
+import os
 AUTHMATRIX_VERSION = "1.0"
 class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFactory):
     def getTabCaption(self):
@@ -75,7 +76,7 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
             currentPane.setBackgroundAt(index,self._db.BURP_ORANGE)
             class setColorBackActionListener(ActionListener):
                 def actionPerformed(self, e):
-                    currentPane.setBackgroundAt(index,Color.BLACK)
+                    currentPane.setBackgroundAt(index,None)
             timer = Timer(5000, setColorBackActionListener())
             timer.setRepeats(False)
             timer.start()
@@ -199,6 +200,54 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
                 fileout.close()
             else:
                 print "Error: Save Failed. JSON empty."
+    def enableAutoSave(self):
+        self._fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY)
+        self._fc.setDialogTitle("Select a folder to Auto Save AuthMatrix state")
+        returnVal = self._fc.showOpenDialog(self._splitpane)
+        self._fc.setFileSelectionMode(JFileChooser.FILES_ONLY)
+        self._fc.setDialogTitle(None)
+        if returnVal != JFileChooser.APPROVE_OPTION:
+            self._autoSaveCheckbox.setSelected(False)
+            return
+        selectedDir = self._fc.getSelectedFile()
+        if not selectedDir or not selectedDir.isDirectory():
+            JOptionPane.showMessageDialog(self._splitpane, "Please select a valid folder.", "Invalid Folder", JOptionPane.WARNING_MESSAGE)
+            self._autoSaveCheckbox.setSelected(False)
+            return
+        self._autoSaveDir = selectedDir.getPath()
+        class AutoSaveTimerListener(ActionListener):
+            def __init__(self, extender):
+                self.extender = extender
+            def actionPerformed(self, e):
+                self.extender.performAutoSave()
+        if self._autoSaveTimer:
+            self._autoSaveTimer.stop()
+        self._autoSaveTimer = Timer(self._autoSaveIntervalMs, AutoSaveTimerListener(self))
+        self._autoSaveTimer.setRepeats(True)
+        self._autoSaveTimer.start()
+        print "Auto Save enabled: saving to '"+self._autoSaveDir+"/"+self._autoSaveFileName+"' every 5 minutes."
+    def disableAutoSave(self):
+        if self._autoSaveTimer:
+            self._autoSaveTimer.stop()
+        print "Auto Save disabled."
+    def performAutoSave(self):
+        try:
+            if not self._autoSaveDir:
+                return
+            if self._db.lock.locked():
+                return
+            self._messageTable.updateMessages()
+            jsonValue = self._db.getSaveableJson()
+            if jsonValue:
+                filePath = os.path.join(self._autoSaveDir, self._autoSaveFileName)
+                fileout = open(filePath, 'w')
+                fileout.write(jsonValue)
+                fileout.close()
+                print "AuthMatrix: Auto-saved state to "+filePath
+            else:
+                print "AuthMatrix: Auto Save skipped, JSON empty."
+        except:
+            traceback.print_exc(file=self._callbacks.getStderr())
     def loadClick(self,e):
         returnVal = self._fc.showOpenDialog(self._splitpane)
         if returnVal == JFileChooser.APPROVE_OPTION:
@@ -509,6 +558,7 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
         self._clearButton.setEnabled(not running)
         self._clearAuthButton.setEnabled(not running)
         self._removeBodyParamButton.setEnabled(not running)
+        self._autoSaveCheckbox.setEnabled(not running)
         self._cancelButton.setEnabled(running)
     def runMessagesThread(self, messageIndexes=None):
         self._db.lock.acquire()
@@ -714,6 +764,10 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
         selfExtender = self
         self._selectedColumn = -1
         self._selectedRow = -1
+        self._autoSaveDir = None
+        self._autoSaveTimer = None
+        self._autoSaveFileName = "AuthMatrix"
+        self._autoSaveIntervalMs = 5*60*1000
         self._chainTable = ChainTable(model = ChainTableModel(self))
         chainScrollPane = JScrollPane(self._chainTable)
         self._chainTable.redrawTable()
@@ -1000,6 +1054,16 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
         self._clearButton = JButton("Clear", actionPerformed=self.clearClick)
         self._clearAuthButton = JButton("Clear Auth & Re-import", actionPerformed=self.clearAuthAndReimportClick)
         self._removeBodyParamButton = JButton("Remove Body Param", actionPerformed=self.removeBodyParamClick)
+        self._autoSaveCheckbox = JCheckBox("Auto Save (every 5 min)")
+        class AutoSaveItemListener(ItemListener):
+            def __init__(self, extender):
+                self.extender = extender
+            def itemStateChanged(self, e):
+                if e.getStateChange() == ItemEvent.SELECTED:
+                    self.extender.enableAutoSave()
+                else:
+                    self.extender.disableAutoSave()
+        self._autoSaveCheckbox.addItemListener(AutoSaveItemListener(self))
         buttons.add(self._runButton)
         buttons.add(self._cancelButton)
         self._cancelButton.setEnabled(False)
@@ -1023,6 +1087,10 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
         buttons.add(self._clearButton)
         buttons.add(self._clearAuthButton)
         buttons.add(self._removeBodyParamButton)
+        separator4 = JSeparator(SwingConstants.VERTICAL)
+        separator4.setPreferredSize(Dimension(25,0))
+        buttons.add(separator4)
+        buttons.add(self._autoSaveCheckbox)
         firstPane = JSplitPane(JSplitPane.VERTICAL_SPLIT,roleScrollPane,messageScrollPane)
         self._topPane = JSplitPane(JSplitPane.VERTICAL_SPLIT, firstPane, chainScrollPane)
         bottomPane = JSplitPane(JSplitPane.VERTICAL_SPLIT, self._tabs, buttons)
