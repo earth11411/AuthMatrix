@@ -10,6 +10,7 @@ from java.awt import GridBagLayout;
 from java.awt import GridBagConstraints;
 from java.awt import Dimension;
 from java.util import ArrayList;
+from java.io import File;
 from java.lang import Boolean;
 from javax.swing import JScrollPane;
 from javax.swing import JSplitPane;
@@ -312,14 +313,18 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
         self._cancelButton.setEnabled(False)
     def saveClick(self, e):
         self._messageTable.updateMessages()
+        self._fc.setSelectedFile(File("AuthMatrix.json"))
         returnVal = self._fc.showSaveDialog(self._splitpane)
         if returnVal == JFileChooser.APPROVE_OPTION:
             f = self._fc.getSelectedFile()
+            fileName = f.getPath()
+            if not fileName.lower().endswith(".json"):
+                fileName = fileName + ".json"
+                f = File(fileName)
             if f.exists():
                 result = JOptionPane.showConfirmDialog(self._splitpane, "The file exists, overwrite?", "Existing File", JOptionPane.YES_NO_OPTION)
                 if result != JOptionPane.YES_OPTION:
                     return
-            fileName = f.getPath()
             jsonValue = self._db.getSaveableJson()
             if jsonValue:
                 fileout = open(fileName,'w')
