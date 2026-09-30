@@ -3,6 +3,7 @@ from burp import IBurpExtender
 from burp import ITab
 from burp import IMessageEditorController
 from burp import IContextMenuFactory
+from burp import IExtensionStateListener
 from burp import IHttpRequestResponse
 from java.awt import Component;
 from java.awt import GridBagLayout;
@@ -41,6 +42,7 @@ from javax.swing.table import TableCellEditor
 from java.awt import Color;
 from java.awt import Font;
 from java.awt.event import MouseAdapter;
+from java.awt.event import MouseEvent;
 from java.awt.event import ActionListener;
 from java.awt.event import ItemListener;
 from java.awt.event import ItemEvent;
@@ -60,7 +62,21 @@ import random
 import string
 import os
 AUTHMATRIX_VERSION = "1.0"
-class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFactory):
+def buildDuplicatePathPalette(count):
+    """
+    Generates 'count' visually distinct, readable (pastel) background colors
+    by spreading hues evenly around the color wheel at a fixed
+    saturation/brightness. Used to highlight requests that share the same
+    HTTP method + URL path.
+    """
+    palette = []
+    for i in range(count):
+        hue = float(i) / float(count)
+        palette.append(Color.getHSBColor(hue, 0.45, 0.93))
+    return palette
+class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFactory, IExtensionStateListener):
+    DUPLICATE_PATH_PALETTE_SIZE = 50
+    DUPLICATE_PATH_PALETTE = buildDuplicatePathPalette(DUPLICATE_PATH_PALETTE_SIZE)
     def getTabCaption(self):
         return "AuthMatrix"
     def getUiComponent(self):
@@ -80,6 +96,102 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
             timer = Timer(5000, setColorBackActionListener())
             timer.setRepeats(False)
             timer.start()
+    def computeDuplicatePathGroups(self):
+        """
+        Groups all active AuthMatrix requests by (HTTP method, URL path) and
+        assigns each group that has more than one member a distinct color
+        from a fixed 50-color palette, so duplicate endpoints stand out in
+        the Message table. GET /test and POST /test are treated as
+        different paths since the HTTP method is part of the grouping key.
+        A single trailing slash is normalized away (but not on the root
+        '/'), so /api/users and /api/users/ are treated as the same path.
+        Recomputed every time the Message table redraws, so it always
+        reflects the current set of requests.
+        """
+        try:
+            self._computeDuplicatePathGroupsUnsafe()
+        except Exception as ex:
+            print "AuthMatrix: duplicate-path highlight skipped for this redraw - "+str(ex)
+    def _computeDuplicatePathGroupsUnsafe(self):
+        groups = {}
+        for messageIndex in self._db.getActiveMessageIndexes():
+            messageEntry = self._db.arrayOfMessages[messageIndex]
+            try:
+                requestResponse = messageEntry._requestResponse
+                if not requestResponse:
+                    continue
+                requestBytes = requestResponse.getRequest()
+                if not requestBytes:
+                    continue
+                # Parse method + path directly off the request line
+                # ("GET /path?query HTTP/1.1") with plain string
+                # operations only. Deliberately avoids
+                # self._helpers.analyzeRequest(...) altogether: both of
+                # its overloads can end up resolving the request's
+                # host/port/protocol under the hood, and a message with
+                # incomplete host data throws "Invalid protocol" and
+                # crashes the whole redraw. Plain string parsing never
+                # touches HttpService, so it can't fail that way.
+                requestStr = self._helpers.bytesToString(requestBytes)
+                lineEnd = requestStr.find("\r\n")
+                requestLine = requestStr if lineEnd < 0 else requestStr[:lineEnd]
+                lineParts = requestLine.split()
+                if len(lineParts) < 2:
+                    continue
+                method = lineParts[0].upper().strip()
+                path = lineParts[1]
+                queryIndex = path.find("?")
+                if queryIndex >= 0:
+                    path = path[:queryIndex]
+                if not path:
+                    path = "/"
+                elif len(path) > 1 and path.endswith("/"):
+                    path = path[:-1]
+            except:
+                continue
+            key = method + " " + path
+            if key in groups:
+                groups[key].append(messageIndex)
+            else:
+                groups[key] = [messageIndex]
+        infoMap = {}
+        duplicateKeys = sorted([k for k in groups.keys() if len(groups[k]) > 1])
+        paletteSize = len(self.DUPLICATE_PATH_PALETTE)
+        for i in range(len(duplicateKeys)):
+            key = duplicateKeys[i]
+            indexes = groups[key]
+            color = self.DUPLICATE_PATH_PALETTE[i % paletteSize]
+            for messageIndex in indexes:
+                infoMap[messageIndex] = (color, key, len(indexes))
+        self._duplicatePathColorMap = infoMap
+    def getDuplicatePathColor(self, messageIndex):
+        info = self._duplicatePathColorMap.get(messageIndex)
+        return info[0] if info else None
+    def getDuplicatePathTooltip(self, messageIndex):
+        info = self._duplicatePathColorMap.get(messageIndex)
+        if info:
+            return "Duplicate request: "+info[1]+" (shared by "+str(info[2])+" requests)"
+        return None
+    def toggleAllForRoleColumn(self, roleIndex):
+        """
+        Clicking a role's column header in the Message table toggles that
+        role's checkbox for every active request at once: if any request is
+        currently unchecked for this role, check all of them; if they are
+        all already checked, uncheck all of them instead.
+        """
+        activeMessageIndexes = self._db.getActiveMessageIndexes()
+        if not activeMessageIndexes:
+            return
+        allChecked = True
+        for messageIndex in activeMessageIndexes:
+            messageEntry = self._db.arrayOfMessages[messageIndex]
+            if not messageEntry._roles.get(roleIndex, False):
+                allChecked = False
+                break
+        newValue = not allChecked
+        for messageIndex in activeMessageIndexes:
+            self._db.setToggleForRole(messageIndex, roleIndex, newValue)
+        self._messageTable.redrawTable()
     def createMenuItems(self, invocation):
         def addRequestsToTab(e):
             if messages:
@@ -145,11 +257,26 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
                     ret.append(menuItem)
         return ret
     def getHttpService(self):
-        return self._currentlyDisplayedItem.getHttpService()
+        try:
+            if self._currentlyDisplayedItem:
+                return self._currentlyDisplayedItem.getHttpService()
+        except:
+            pass
+        return None
     def getRequest(self):
-        return self._currentlyDisplayedItem.getRequest()
+        try:
+            if self._currentlyDisplayedItem:
+                return self._currentlyDisplayedItem.getRequest()
+        except:
+            pass
+        return None
     def getResponse(self):
-        return self._currentlyDisplayedItem.getResponse()
+        try:
+            if self._currentlyDisplayedItem:
+                return self._currentlyDisplayedItem.getResponse()
+        except:
+            pass
+        return None
     def getInputUserClick(self, e):
         newUser = JOptionPane.showInputDialog(self._splitpane,"Enter New User:")
         if newUser:
@@ -230,6 +357,15 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
         if self._autoSaveTimer:
             self._autoSaveTimer.stop()
         print "Auto Save disabled."
+    def extensionUnloaded(self):
+        """
+        Called by Burp when this extension is unloaded or reloaded. Without
+        this, the repeating Auto Save Timer (if enabled) would keep firing
+        in the background forever, referencing a stale/unloaded extension
+        instance.
+        """
+        if self._autoSaveTimer:
+            self._autoSaveTimer.stop()
     def performAutoSave(self):
         try:
             if not self._autoSaveDir:
@@ -768,6 +904,7 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
         self._autoSaveTimer = None
         self._autoSaveFileName = "AuthMatrix"
         self._autoSaveIntervalMs = 5*60*1000
+        self._duplicatePathColorMap = {}
         self._chainTable = ChainTable(model = ChainTableModel(self))
         chainScrollPane = JScrollPane(self._chainTable)
         self._chainTable.redrawTable()
@@ -1013,6 +1150,19 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
         disableToggle = JMenuItem("Bulk Unselect Checkboxes")
         disableToggle.addActionListener(actionSetToggleForRole(False))
         messageHeaderPopup.add(disableToggle)
+        class HeaderClickToggleColumnListener(MouseAdapter):
+            def mouseClicked(self, e):
+                if e.getButton() != MouseEvent.BUTTON1 or e.isPopupTrigger():
+                    return
+                if selfExtender._db.lock.locked():
+                    return
+                header = e.getComponent()
+                column = header.columnAtPoint(e.getPoint())
+                if column >= selfExtender._db.STATIC_MESSAGE_TABLE_COLUMN_COUNT:
+                    roleEntry = selfExtender._db.getRoleByColumn(column, "m")
+                    if roleEntry:
+                        selfExtender.toggleAllForRoleColumn(roleEntry._index)
+        self._messageTable.getTableHeader().addMouseListener(HeaderClickToggleColumnListener())
         userPopup = JPopupMenu()
         addPopup(self._userTable,userPopup)
         toggleEnabled = JMenuItem("Disable/Enable User(s)")
@@ -1112,12 +1262,13 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorController, IContextMenuFa
         self._topPane.setResizeWeight(0.85)
         bottomPane.setResizeWeight(0.95)
         self._messageTable.setDefaultRenderer(Boolean, SuccessBooleanRenderer(self._messageTable.getDefaultRenderer(Boolean), self._db))
-        self._messageTable.setDefaultRenderer(str, RegexRenderer(self._messageTable.getDefaultRenderer(str), self._db))
+        self._messageTable.setDefaultRenderer(str, RegexRenderer(self._messageTable.getDefaultRenderer(str), self._db, self))
         self._userTable.setDefaultRenderer(str, UserEnabledRenderer(self._userTable.getDefaultRenderer(str), self._db))
         self._userTable.setDefaultRenderer(Boolean, UserEnabledRenderer(self._userTable.getDefaultRenderer(Boolean), self._db))
         self._chainTable.setDefaultRenderer(str, ChainEnabledRenderer(self._chainTable.getDefaultRenderer(str), self._db))
         callbacks.addSuiteTab(self)
         callbacks.registerContextMenuFactory(self)
+        callbacks.registerExtensionStateListener(self)
         return
 class ModifyMessage():
     @staticmethod
@@ -2084,6 +2235,7 @@ class MessageTable(JTable):
             self._viewerMap[index] = requestViewer
         return requestTabs
     def redrawTable(self):
+        self._extender.computeDuplicatePathGroups()
         self.getModel().fireTableStructureChanged()
         self.getModel().fireTableDataChanged()
         db = self.getModel()._db
@@ -2345,12 +2497,19 @@ class SuccessBooleanRenderer(JCheckBox, TableCellRenderer):
                         cell.setBackground(Color.GRAY)
         return cell
 class RegexRenderer(JLabel, TableCellRenderer):
-    def __init__(self, defaultCellRender, db):
+    def __init__(self, defaultCellRender, db, extender):
         self._defaultCellRender = defaultCellRender
         self._db = db
+        self._extender = extender
     def getTableCellRendererComponent(self, table, value, isSelected, hasFocus, row, column):
         cell = self._defaultCellRender.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
         messageEntry = self._db.getMessageByRow(row)
+        duplicateColor = None
+        duplicateTooltip = None
+        if messageEntry:
+            duplicateColor = self._extender.getDuplicatePathColor(messageEntry._index)
+            duplicateTooltip = self._extender.getDuplicatePathTooltip(messageEntry._index)
+        cell.setToolTipText(duplicateTooltip)
         if column == self._db.STATIC_MESSAGE_TABLE_COLUMN_COUNT-1:
             if messageEntry:
                 if messageEntry.isFailureRegex():
@@ -2361,11 +2520,15 @@ class RegexRenderer(JLabel, TableCellRenderer):
                 else:
                     if isSelected:
                         cell.setBackground(table.getSelectionBackground())
+                    elif duplicateColor:
+                        cell.setBackground(duplicateColor)
                     else:
                         cell.setBackground(table.getBackground())
         else:
             if isSelected:
                 cell.setBackground(table.getSelectionBackground())
+            elif duplicateColor:
+                cell.setBackground(duplicateColor)
             else:
                 cell.setBackground(table.getBackground())
         if messageEntry and not messageEntry.isEnabled():
@@ -2637,9 +2800,12 @@ class RequestResponseStored(IHttpRequestResponse):
     def getHighlight(self):
         return self._highlight
     def getHttpService(self):
-        service = self._extender._helpers.buildHttpService(self._host, self._port, self._protocol)
-        if service:
-            return service
+        try:
+            service = self._extender._helpers.buildHttpService(self._host, self._port, self._protocol)
+            if service:
+                return service
+        except:
+            pass
         return None
     def getRequest(self):
         return self._request
